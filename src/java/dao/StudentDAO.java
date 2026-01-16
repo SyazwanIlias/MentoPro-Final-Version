@@ -215,4 +215,42 @@ public class StudentDAO {
         s.setStudentCGPA(rs.getDouble("studentCGPA"));
         return s;
     }
+    
+    // Method to get a student's approved mentors
+    public List<Student> getApprovedMentorsForStudent(int studentId) {
+        String sql = "SELECT s.* FROM student s JOIN mentorship m ON s.studentID = m.mentorID "
+                + "WHERE m.menteeID = ? AND m.status = 'APPROVED'";
+        return getStudentsByQuery(sql, studentId);
+    }
+
+// Method to get a mentor's approved mentees
+    public List<Student> getApprovedMenteesForMentor(int mentorId) {
+        String sql = "SELECT s.* FROM student s JOIN mentorship m ON s.studentID = m.menteeID "
+                + "WHERE m.mentorID = ? AND m.status = 'APPROVED'";
+        return getStudentsByQuery(sql, mentorId);
+    }
+    // Helper method to run a query and return a list of Student objects
+private List<Student> getStudentsByQuery(String sql, int parameterId) {
+    List<Student> list = new ArrayList<>();
+    try (Connection conn = DBConn.getConnection(); 
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        
+        ps.setInt(1, parameterId);
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            Student s = new Student();
+            s.setStudentID(rs.getInt("studentID"));
+            s.setStudentName(rs.getString("studentName"));
+            s.setStudentEmail(rs.getString("studentEmail"));
+            s.setCourseCode(rs.getString("courseCode"));
+            s.setProfilePic(rs.getString("profilePic"));
+            // Add any other setters you have in your Student model
+            list.add(s);
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return list;
+}
 }
