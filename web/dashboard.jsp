@@ -669,6 +669,22 @@
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">Save Profile Changes</button>
             </form>
         </div>
+        <div style="margin-top: 40px; padding: 20px; border: 2px solid #fee2e2; border-radius: 12px; background: #fff;">
+    <h3 style="color: #991b1b; font-size: 18px; margin-bottom: 8px;">Delete Account</h3>
+    <p style="color: #7f1d1d; font-size: 14px; margin-bottom: 15px;">
+        Deleting your account will remove all your profile data and mentorship connections permanently.
+    </p>
+    
+    <form action="ProfileServlet" method="POST" onsubmit="return confirm('WARNING: This will drop ALL your data from the database. Are you sure?');">
+        <!-- currentId is from your session at top of dashboard.jsp -->
+        <input type="hidden" name="studentID" value="<%= currentId %>">
+        <input type="hidden" name="action" value="delete">
+        
+        <button type="submit" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s;">
+            <i class="fa-solid fa-trash-can" style="margin-right: 8px;"></i> Permanent Delete
+        </button>
+    </form>
+</div>        
     <% } %>
 </div>
 

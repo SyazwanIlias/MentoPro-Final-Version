@@ -54,22 +54,15 @@ public class StudentDAO {
         return null;
     }
 
-    // 4. Get Accepted Connections (FOR MESSAGES PAGE)
+    // 4. Get Accepted Connections
     public List<Map<String, Object>> getAcceptedConnections(Integer userId, String role) throws Exception {
         List<Map<String, Object>> connections = new ArrayList<>();
         String sql;
         if ("Mentor".equals(role)) {
-            sql = "SELECT s.studentID, s.studentName, s.profilePic, s.courseCode " +
-                  "FROM mentorship m " +
-                  "JOIN student s ON m.menteeID = s.studentID " +
-                  "WHERE m.mentorID = ? AND m.status = 'APPROVED'";
+            sql = "SELECT s.studentID, s.studentName, s.profilePic, s.courseCode FROM mentorship m JOIN student s ON m.menteeID = s.studentID WHERE m.mentorID = ? AND m.status = 'APPROVED'";
         } else {
-            sql = "SELECT s.studentID, s.studentName, s.profilePic, s.courseCode " +
-                  "FROM mentorship m " +
-                  "JOIN student s ON m.mentorID = s.studentID " +
-                  "WHERE m.menteeID = ? AND m.status = 'APPROVED'";
+            sql = "SELECT s.studentID, s.studentName, s.profilePic, s.courseCode FROM mentorship m JOIN student s ON m.mentorID = s.studentID WHERE m.menteeID = ? AND m.status = 'APPROVED'";
         }
-
         try (Connection con = DBConn.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
@@ -85,7 +78,7 @@ public class StudentDAO {
         return connections;
     }
 
-    // 5. Apply for Mentorship (FOR MENTORSHIP SERVLET)
+    // 5. Apply for Mentorship
     public boolean applyForMentorship(int mentorId, int menteeId) throws Exception {
         String sql = "INSERT INTO mentorship (mentorID, menteeID, status) VALUES (?, ?, 'PENDING')";
         try (Connection con = DBConn.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
@@ -95,7 +88,7 @@ public class StudentDAO {
         }
     }
 
-    // 6. Update Request Status (FOR MENTORSHIP SERVLET)
+    // 6. Update Request Status
     public boolean updateRequestStatus(int mentorId, int menteeId, String status) throws Exception {
         String sql = "UPDATE mentorship SET status = ? WHERE mentorID = ? AND menteeID = ?";
         try (Connection con = DBConn.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
@@ -106,13 +99,10 @@ public class StudentDAO {
         }
     }
 
-    // 7. Get Pending Requests (FOR DASHBOARD)
+    // 7. Get Pending Requests
     public List<Map<String, Object>> getPendingRequests(int mentorId) throws Exception {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "SELECT s.studentID, s.studentName, s.courseCode, s.profilePic, m.status " +
-                     "FROM mentorship m " +
-                     "JOIN student s ON m.menteeID = s.studentID " +
-                     "WHERE m.mentorID = ? AND m.status = 'PENDING'";
+        String sql = "SELECT s.studentID, s.studentName, s.courseCode, s.profilePic, m.status FROM mentorship m JOIN student s ON m.menteeID = s.studentID WHERE m.mentorID = ? AND m.status = 'PENDING'";
         try (Connection con = DBConn.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, mentorId);
             ResultSet rs = ps.executeQuery();
@@ -171,6 +161,42 @@ public class StudentDAO {
             }
         }
         return list;
+    }
+
+    /**
+     * FULL DELETE: Removes student and all related foreign key data.
+     */
+    public boolean deleteStudent(int id) throws Exception {
+        Connection con = null;
+        PreparedStatement psRelated = null;
+        PreparedStatement psUser = null;
+        try {
+            con = DBConn.getConnection();
+            con.setAutoCommit(false); // Transaction start
+
+            // First: delete child records to avoid Foreign Key violations
+            String sql1 = "DELETE FROM mentorship WHERE mentorID = ? OR menteeID = ?";
+            psRelated = con.prepareStatement(sql1);
+            psRelated.setInt(1, id);
+            psRelated.setInt(2, id);
+            psRelated.executeUpdate();
+
+            // Second: delete parent record (the student)
+            String sqlFinal = "DELETE FROM student WHERE studentID = ?";
+            psUser = con.prepareStatement(sqlFinal);
+            psUser.setInt(1, id);
+            int rowsDeleted = psUser.executeUpdate();
+
+            con.commit(); // Push to DB
+            return rowsDeleted > 0;
+        } catch (Exception e) {
+            if (con != null) con.rollback();
+            throw e;
+        } finally {
+            if (psRelated != null) psRelated.close();
+            if (psUser != null) psUser.close();
+            if (con != null) con.close();
+        }
     }
 
     private Student mapStudent(ResultSet rs) throws SQLException {
