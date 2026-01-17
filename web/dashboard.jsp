@@ -736,9 +736,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">Save Profile Changes</button>
             </form>
-        </div>
-   
-        <div style="margin-top: 40px; padding: 20px; border: 2px solid #fee2e2; border-radius: 12px; background: #fff;">
+                <div style="margin-top: 40px; padding: 20px; border: 2px solid #fee2e2; border-radius: 12px; background: #fff;">
     <h3 style="color: #991b1b; font-size: 18px; margin-bottom: 8px;">Delete Account</h3>
     <p style="color: #7f1d1d; font-size: 14px; margin-bottom: 15px;">
         Deleting your account will remove all your profile data and mentorship connections permanently.
@@ -753,7 +751,8 @@
             <i class="fa-solid fa-trash-can" style="margin-right: 8px;"></i> Permanent Delete
         </button>
     </form>
-</div>        
+</div>
+        </div>               
     <% } %>
 </div>
 
