@@ -1,5 +1,6 @@
 <%@ page session="true" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="dao.StudentDAO, model.Student, java.util.*" %>
+<%@ page import="dao.StudentDAO, dao.NotesDAO, model.Student, java.util.*" %>
 <%
     if (session.getAttribute("studentName") == null) {
         response.sendRedirect("login.jsp");
@@ -331,6 +332,12 @@
                 <span>My Profile</span>
             </a>
         </li>
+        <li>
+            <a href="dashboard.jsp?view=notes" class="<%= view.equals("notes") ? "active" : ""%>">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>Study Notes</span>
+            </a>
+        </li>
     </ul>
     <a href="LogoutServlet" style="text-decoration: none; margin-top: auto;">
         <div style="padding: 12px 15px; color: #f87171; font-weight: 600; display: flex; align-items: center; gap: 12px;">
@@ -524,7 +531,7 @@
                 </div>
             </div>
         </div>
-
+                            
     <% } else if (view.equals("messages")) { %>
         <h2 style="margin-bottom: 25px;">Messages</h2>
         <div class="chat-container">
@@ -610,7 +617,68 @@
             </div>
             <% } %>
         </div>
+        
+<% } else if (view.equals("notes")) { 
+    dao.NotesDAO nDao = new dao.NotesDAO();
+%>
+    <h2 style="margin-bottom: 25px;">Learning Materials</h2>
 
+    <% if ("Mentor".equals(currentRole)) { %>
+        <div class="detail-box">
+            <h3 style="margin-bottom: 15px; font-size: 16px;">Upload New Materials</h3>
+            <form action="NotesServlet" method="POST" enctype="multipart/form-data" style="display: flex; gap: 15px; align-items: flex-end;">
+                <div style="flex-grow: 1;">
+                    <label style="font-size: 13px; color: #64748b; display: block; margin-bottom: 5px;">Select Document</label>
+                    <input type="file" name="noteFile" required style="width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</button>
+            </form>
+        </div>
+
+        <h3 style="margin: 30px 0 15px; font-size: 18px;">Your Uploaded Notes</h3>
+        <div class="grid" style="margin-bottom: 40px;">
+            <% 
+                List<Map<String, Object>> myNotes = nDao.getNotesByMentor(currentId);
+                for (Map<String, Object> note : myNotes) { 
+            %>
+                <div class="m-card" style="border-top: 4px solid #6366f1;">
+                    <div class="m-avatar" style="background: #f1f5f9; color: #6366f1;"><i class="fa-solid fa-file-pdf"></i></div>
+                    <h3 style="font-size: 14px;"><%= note.get("fileName") %></h3>
+                    <p style="font-size: 11px; color: #94a3b8; margin: 10px 0;">Uploaded: <%= note.get("uploadDate") %></p>
+                    <a href="NotesServlet?id=<%= note.get("noteID") %>" class="btn btn-success" style="width: 100%; justify-content: center;">
+                        <i class="fa-solid fa-download"></i> Download
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    <% } %>
+
+    <%-- Mentees (or Mentors) view notes from other approved mentors --%>
+    <% if ("Student".equals(currentRole)) { %>
+        <h3 style="margin-bottom: 15px; font-size: 18px;">Materials from your Mentors</h3>
+        <div class="grid">
+            <% 
+                List<Map<String, Object>> sharedNotes = nDao.getNotesForMentee(currentId);
+                if (sharedNotes.isEmpty()) { 
+            %>
+                <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #94a3b8;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 48px; margin-bottom: 10px;"></i>
+                    <p>No materials available from your approved mentors.</p>
+                </div>
+            <% } else { 
+                for (Map<String, Object> note : sharedNotes) { 
+            %>
+                <div class="m-card">
+                    <div class="m-avatar" style="background: #eef2ff; color: #6366f1;"><i class="fa-solid fa-file-pdf"></i></div>
+                    <h3 style="font-size: 14px;"><%= note.get("fileName") %></h3>
+                    <p style="font-size: 11px; color: #94a3b8; margin: 10px 0;">Mentor: <%= note.get("mentorName") %></p>
+                    <a href="NotesServlet?id=<%= note.get("noteID") %>" class="btn btn-success" style="width: 100%; justify-content: center;">
+                        <i class="fa-solid fa-download"></i> Download
+                    </a>
+                </div>
+            <% } } %>
+        </div>
+    <% } %>
     <% } else if (view.equals("profile")) { %>
         <h2 style="margin-bottom: 25px;">Account Settings</h2>
         <div class="detail-box">
@@ -669,6 +737,7 @@
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">Save Profile Changes</button>
             </form>
         </div>
+   
         <div style="margin-top: 40px; padding: 20px; border: 2px solid #fee2e2; border-radius: 12px; background: #fff;">
     <h3 style="color: #991b1b; font-size: 18px; margin-bottom: 8px;">Delete Account</h3>
     <p style="color: #7f1d1d; font-size: 14px; margin-bottom: 15px;">
