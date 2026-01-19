@@ -211,16 +211,21 @@ public class StudentDAO {
         return s;
     }
     
-    public List<Student> getApprovedMentorsForStudent(int studentId) {
-        String sql = "SELECT s.* FROM student s JOIN mentorship m ON s.studentID = m.mentorID "
-                + "WHERE m.menteeID = ? AND m.status = 'APPROVED'";
-        return getStudentsByQuery(sql, studentId);
-    }
-
+    // Method for Mentors to see their Mentees
     public List<Student> getApprovedMenteesForMentor(int mentorId) {
-        String sql = "SELECT s.* FROM student s JOIN mentorship m ON s.studentID = m.menteeID "
+        // Make sure the table name is 'mentorship' and status is 'APPROVED'
+        String sql = "SELECT s.* FROM student s "
+                + "JOIN mentorship m ON s.studentID = m.menteeID "
                 + "WHERE m.mentorID = ? AND m.status = 'APPROVED'";
         return getStudentsByQuery(sql, mentorId);
+    }
+
+// Method for Mentees to see their Mentors
+    public List<Student> getApprovedMentorsForStudent(int menteeId) {
+        String sql = "SELECT s.* FROM student s "
+                + "JOIN mentorship m ON s.studentID = m.mentorID "
+                + "WHERE m.menteeID = ? AND m.status = 'APPROVED'";
+        return getStudentsByQuery(sql, menteeId);   
     }
 
     private List<Student> getStudentsByQuery(String sql, int parameterId) {
