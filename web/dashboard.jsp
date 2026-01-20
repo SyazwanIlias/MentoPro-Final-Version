@@ -767,6 +767,17 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Disabled button style */
+        .btn:disabled {
+            cursor: not-allowed !important;
+            opacity: 0.6;
+            transform: none !important;
+        }
+
+        .btn:disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 <body>
@@ -841,37 +852,99 @@
 
 <div class="content">
     <% if (view.equals("mentors")) { %>
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; margin-bottom: 36px;">
-            <h1 class="page-header">Find Your Perfect Mentor</h1>
-            <div class="search-container" style="margin-bottom: 0;">
-                <input type="text" id="mentorSearch" class="search-input" placeholder="Search by name or course code..." onkeyup="filterMentors()">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; margin-bottom: 36px;">
+        <h1 class="page-header">
+            <% if (isMentor) { %>
+            All Mentors (View Only)
+            <% } else { %>
+            Find Your Perfect Mentor
+            <% } %>
+        </h1>
+        <div class="search-container" style="margin-bottom: 0;">
+            <input type="text" id="mentorSearch" class="search-input" placeholder="Search by name or course code..." onkeyup="filterMentors()">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        </div>
+    </div>
+
+    <% if (isMentor) { %>
+    <!-- MENTOR VIEW: Show all mentors (view only, no apply button) -->
+    <div class="grid" id="mentorGrid">
+        <%
+            List<Student> allMentors = sDao.getAllMentorsExcludingSelf(currentId);
+            for (Student s : allMentors) {
+        %>
+        <div class="m-card mentor-item" 
+             data-name="<%= s.getStudentName().toLowerCase()%>" 
+             data-course="<%= s.getCourseCode().toLowerCase()%>"
+             onclick="location.href='dashboard.jsp?view=mentor_detail&mid=<%= s.getStudentID()%>'">
+            <div class="m-avatar">
+                <% if (s.getProfilePic() != null && !s.getProfilePic().isEmpty()) {%>
+                <img src="<%= s.getProfilePic()%>">
+                <% } else {%>
+                <%= s.getStudentName().substring(0, 1)%>
+                <% }%>
+            </div>
+            <h3 class="mentor-name"><%= s.getStudentName()%></h3>
+            <span class="info-pill mentor-course"><%= s.getCourseCode()%></span>
+        </div>
+        <% } %>
+    </div>
+    <% } else { %>
+    <!-- MENTEE VIEW: Show mentors excluding approved ones, with request status -->
+    <div class="grid" id="mentorGrid">
+        <%
+            List<Map<String, Object>> mentorsForMentee = sDao.getMentorsForMenteeOverview(currentId);
+            for (Map<String, Object> mentorData : mentorsForMentee) {
+                Student s = (Student) mentorData.get("student");
+                String requestStatus = (String) mentorData.get("requestStatus");
+        %>
+        <div class="m-card mentor-item" 
+             data-name="<%= s.getStudentName().toLowerCase()%>" 
+             data-course="<%= s.getCourseCode().toLowerCase()%>">
+            <div onclick="location.href='dashboard.jsp?view=mentor_detail&mid=<%= s.getStudentID()%>'" style="cursor: pointer;">
+                <div class="m-avatar">
+                    <% if (s.getProfilePic() != null && !s.getProfilePic().isEmpty()) {%>
+                    <img src="<%= s.getProfilePic()%>">
+                    <% } else {%>
+                    <%= s.getStudentName().substring(0, 1)%>
+                    <% }%>
+                </div>
+                <h3 class="mentor-name"><%= s.getStudentName()%></h3>
+                <span class="info-pill mentor-course"><%= s.getCourseCode()%></span>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <% if (requestStatus == null) {%>
+                <!-- No request sent yet - show Apply button -->
+                <a href="MentorshipServlet?action=request&mentorId=<%= s.getStudentID()%>&menteeId=<%= currentId%>" 
+                   class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px 16px;">
+                    <i class="fa-solid fa-paper-plane"></i> Apply
+                </a>
+                <% } else if ("PENDING".equals(requestStatus)) { %>
+                <!-- Request is pending -->
+                <button class="btn btn-outline" disabled style="width: 100%; justify-content: center; padding: 10px 16px;">
+                    <i class="fa-solid fa-clock"></i> Request Sent
+                </button>
+                <% } else if ("REJECTED".equals(requestStatus)) {%>
+                <!-- Request was rejected - allow reapplication -->
+                <a href="MentorshipServlet?action=request&mentorId=<%= s.getStudentID()%>&menteeId=<%= currentId%>" 
+                   class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px 16px;">
+                    <i class="fa-solid fa-rotate-right"></i> Apply Again
+                </a>
+                <div style="margin-top: 8px; font-size: 11px; color: #ef4444; text-align: center; font-weight: 600;">
+                    Previous request was rejected
+                </div>
+                <% } %>
             </div>
         </div>
+        <% } %>
+    </div>
+    <% } %>
 
-        <div class="grid" id="mentorGrid">
-            <% for (Student s : sDao.getAllMentors()) { if (s.getStudentID() == currentId) continue; %>
-                <div class="m-card mentor-item" 
-                     data-name="<%= s.getStudentName().toLowerCase() %>" 
-                     data-course="<%= s.getCourseCode().toLowerCase() %>"
-                     onclick="location.href='dashboard.jsp?view=mentor_detail&mid=<%= s.getStudentID() %>'">
-                    <div class="m-avatar">
-                        <% if (s.getProfilePic() != null && !s.getProfilePic().isEmpty()) { %>
-                            <img src="<%= s.getProfilePic() %>">
-                        <% } else { %>
-                            <%= s.getStudentName().substring(0, 1) %>
-                        <% } %>
-                    </div>
-                    <h3 class="mentor-name"><%= s.getStudentName() %></h3>
-                    <span class="info-pill mentor-course"><%= s.getCourseCode() %></span>
-                </div>
-            <% } %>
-        </div>
-
-        <div id="noResults" class="no-results" style="display: none;">
-            <i class="fa-solid fa-user-slash"></i>
-            <p>No mentors found matching your search</p>
-        </div>
+    <div id="noResults" class="no-results" style="display: none;">
+        <i class="fa-solid fa-user-slash"></i>
+        <p>No mentors found matching your search</p>
+    </div>
 
     <% } else if (view.equals("connections")) { %>
 
@@ -933,6 +1006,13 @@
                     </span>
                     <p style="color: #64748b; margin: 8px 0; font-size: 15px;"><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> <%= person.getStudentEmail()%></p>
                     <p style="color: #64748b; font-size: 15px;"><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> <%= person.getStudentPhone()%></p>
+                    <a href="https://wa.me/<%= person.getStudentPhone()%>" target="_blank" style="display: inline-flex; align-items: center; background-color: #25D366; color: white; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-family: sans-serif; font-size: 14px; margin-right: 10px;">
+                        <i class="fa-brands fa-whatsapp" style="margin-right: 8px;"></i> WhatsApp
+                    </a>
+
+                    <a href="https://t.me/+<%= person.getStudentPhone().replace("+", "")%>" target="_blank" style="display: inline-flex; align-items: center; background-color: #0088cc; color: white; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-family: sans-serif; font-size: 14px;">
+                        <i class="fa-brands fa-telegram" style="margin-right: 8px;"></i> Telegram
+                    </a>
                 </div>
             </div>
             <div style="border-top: 2px solid #f1f5f9; padding-top: 28px;">
@@ -941,63 +1021,111 @@
             </div>
         </div>
 
-    <% } else if (view.equals("mentor_detail")) { 
-        int mid = Integer.parseInt(request.getParameter("mid"));
-        Student mentor = sDao.getStudentById(mid);
-    %>
-        <a href="dashboard.jsp?view=mentors" class="btn btn-outline" style="margin-bottom: 28px;">
-            <i class="fa-solid fa-arrow-left"></i> Back to Mentors
-        </a>
-        <div class="detail-box">
-            <div style="display: flex; gap: 48px; align-items: flex-start;">
-                <div class="m-avatar" style="width: 160px; height: 160px; margin: 0; font-size: 68px;">
-                    <% if (mentor.getProfilePic() != null && !mentor.getProfilePic().isEmpty()) { %>
-                        <img src="<%= mentor.getProfilePic() %>">
-                    <% } else { %>
-                        <%= mentor.getStudentName().substring(0,1) %>
-                    <% } %>
-                </div>
-                <div style="flex-grow: 1;">
-                    <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 12px; color: #2d3748;"><%= mentor.getStudentName() %></h1>
-                    <div style="display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;">
-                        <span class="info-pill" style="font-size: 14px;"><%= mentor.getCourseCode() %></span>
-                        <span class="info-pill verified-badge" style="font-size: 14px;">
-                            <i class="fa-solid fa-circle-check"></i> VERIFIED MENTOR
-                        </span>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
-                        <div style="padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border-radius: 16px; border: 2px solid #f1f5f9;">
-                            <label style="margin-bottom: 8px;">Email Address</label>
-                            <div style="font-size: 15px; font-weight: 600; color: #2d3748;"><%= mentor.getStudentEmail() %></div>
+                <% } else if (view.equals("mentor_detail")) {
+                    int mid = Integer.parseInt(request.getParameter("mid"));
+                    Student mentor = sDao.getStudentById(mid);
+
+                    String requestStatus = null;
+                    if ("Mentee".equals(currentRole)) {
+                        requestStatus = sDao.getRequestStatus(mid, currentId);
+                    }
+                %>
+                <a href="dashboard.jsp?view=mentors" class="btn btn-outline" style="margin-bottom: 28px;">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Mentors
+                </a>
+                <div class="detail-box">
+                    <div style="display: flex; gap: 48px; align-items: flex-start;">
+                        <div class="m-avatar" style="width: 160px; height: 160px; margin: 0; font-size: 68px;">
+                            <% if (mentor.getProfilePic() != null && !mentor.getProfilePic().isEmpty()) {%>
+                            <img src="<%= mentor.getProfilePic()%>">
+                            <% } else {%>
+                            <%= mentor.getStudentName().substring(0, 1)%>
+                            <% }%>
                         </div>
-                        <div style="padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border-radius: 16px; border: 2px solid #f1f5f9;">
-                            <label style="margin-bottom: 8px;">Phone Number</label>
-                            <div style="font-size: 15px; font-weight: 600; color: #2d3748;"><%= mentor.getStudentPhone() %></div>
+                        <div style="flex-grow: 1;">
+                            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 12px; color: #2d3748;"><%= mentor.getStudentName()%></h1>
+                            <div style="display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;">
+                                <span class="info-pill" style="font-size: 14px;"><%= mentor.getCourseCode()%></span>
+                                <span class="info-pill verified-badge" style="font-size: 14px;">
+                                    <i class="fa-solid fa-circle-check"></i> VERIFIED MENTOR
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+                                <div style="padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border-radius: 16px; border: 2px solid #f1f5f9;">
+                                    <label style="margin-bottom: 8px;">Email Address</label>
+                                    <div style="font-size: 15px; font-weight: 600; color: #2d3748;">
+                                        <% if ("APPROVED".equals(requestStatus)) {%>
+                                        <%= mentor.getStudentEmail()%>
+                                        <% } else { %>
+                                        <label>*******@gmail.com</label>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <div style="padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border-radius: 16px; border: 2px solid #f1f5f9;">
+                                    <label style="margin-bottom: 8px;">Phone Number</label>
+                                    <div style="font-size: 15px; font-weight: 600; color: #2d3748;">
+                                        <% if ("APPROVED".equals(requestStatus)) {%>
+                                        <%= mentor.getStudentPhone()%>
+                                        <% } else { %>
+                                        <label>+60*********</label>
+                                        <% }%>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 28px;">
+                                <label style="margin-bottom: 10px;">Professional Bio</label>
+                                <p style="line-height: 1.8; color: #475569;"><%= (mentor.getStudentBio() != null && !mentor.getStudentBio().isEmpty()) ? mentor.getStudentBio() : "No bio provided."%></p>
+                            </div>
+
+                            <div style="margin-bottom: 32px;">
+                                <label style="margin-bottom: 10px;">Expertise & Achievements</label>
+                                <p style="line-height: 1.8; color: #475569;"><%= (mentor.getStudentAchievements() != null && !mentor.getStudentAchievements().isEmpty()) ? mentor.getStudentAchievements() : "No achievements listed."%></p>
+                            </div>
+
+                            <div style="display: flex; gap: 14px; margin-top: 36px; border-top: 2px solid #f1f5f9; padding-top: 32px; flex-wrap: wrap;">
+                                <% if ("Mentee".equals(currentRole)) { %>
+                                <% if (requestStatus == null) {%>
+                                <!-- No request sent yet -->
+                                <a href="MentorshipServlet?action=request&mentorId=<%= mentor.getStudentID()%>&menteeId=<%= currentId%>" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-paper-plane"></i> Request Mentorship
+                                </a>
+                                <% } else if ("PENDING".equals(requestStatus)) { %>
+                                <!-- Request pending -->
+                                <button class="btn btn-outline" disabled style="padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-clock"></i> Request Already Sent
+                                </button>
+                                <div style="width: 100%; margin-top: -8px; font-size: 13px; color: #64748b;">
+                                    Your request is waiting for approval from this mentor
+                                </div>
+                                <% } else if ("APPROVED".equals(requestStatus)) { %>
+                                <!-- Already connected -->
+                                <button class="btn btn-success" disabled style="padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-circle-check"></i> Already Connected
+                                </button>
+                                <a href="dashboard.jsp?view=connections" class="btn btn-outline" style="padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-link"></i> View in Connections
+                                </a>
+                                <% } else if ("REJECTED".equals(requestStatus)) {%>
+                                <!-- Request was rejected - allow reapplication -->
+                                <a href="MentorshipServlet?action=request&mentorId=<%= mentor.getStudentID()%>&menteeId=<%= currentId%>" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-rotate-right"></i> Request Mentorship Again
+                                </a>
+                                <div style="width: 100%; margin-top: -8px; font-size: 13px; color: #ef4444; font-weight: 600;">
+                                    Your previous request was rejected. You can apply again.
+                                </div>
+                                <% } %>
+                                <% } else { %>
+                                <!-- User is a Mentor - view only -->
+                                <div class="info-pill" style="background: #fee2e2; color: #991b1b; padding: 14px 32px; font-size: 15px;">
+                                    <i class="fa-solid fa-eye"></i> View Only - Mentors cannot request mentorship
+                                </div>
+                                <% } %>
+                            </div>
                         </div>
                     </div>
-
-                    <div style="margin-bottom: 28px;">
-                        <label style="margin-bottom: 10px;">Professional Bio</label>
-                        <p style="line-height: 1.8; color: #475569;"><%= (mentor.getStudentBio()!=null && !mentor.getStudentBio().isEmpty())?mentor.getStudentBio():"No bio provided." %></p>
-                    </div>
-
-                    <div style="margin-bottom: 32px;">
-                        <label style="margin-bottom: 10px;">Expertise & Achievements</label>
-                        <p style="line-height: 1.8; color: #475569;"><%= (mentor.getStudentAchievements()!=null && !mentor.getStudentAchievements().isEmpty())?mentor.getStudentAchievements():"No achievements listed." %></p>
-                    </div>
-
-                    <div style="display: flex; gap: 14px; margin-top: 36px; border-top: 2px solid #f1f5f9; padding-top: 32px; flex-wrap: wrap;">
-                        <a href="MentorshipServlet?action=request&mentorId=<%= mentor.getStudentID() %>&menteeId=<%= currentId %>" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px;">
-                            <i class="fa-solid fa-paper-plane"></i> Request Mentorship
-                        </a>
-                        <a href="dashboard.jsp?view=messages" class="btn btn-outline" style="padding: 14px 32px; font-size: 15px;">
-                            <i class="fa-solid fa-message"></i> Message
-                        </a>
-                    </div>
                 </div>
-            </div>
-        </div>
 
     <% } else if (view.equals("requests")) { %>
         <h1 class="page-header">Pending Requests</h1>
@@ -1144,7 +1272,7 @@
                             </div>
                             <div>
                                 <label>Phone Number</label>
-                                <input type="text" name="phone" value="<%= me.getStudentPhone() %>">
+                                <input type="text" name="phone" value="<%= me.getStudentPhone() != null && !me.getStudentPhone().isEmpty() ? me.getStudentPhone() : "+60"%>" oninput="if(!this.value.startsWith('+60')) this.value = '+60' + this.value.replace(/^\+?6?0?/, ''); this.value = '+60' + this.value.substring(3).replace(/\D/g, '');">
                             </div>
                             <div>
                                 <label>Current CGPA</label>
@@ -1253,7 +1381,9 @@ window.onload = function() {
     var status = urlParams.get('status');
 
     if (msg) {
-        showNotification(decodeURIComponent(msg), status || 'success');
+        // Decode the URL-encoded message
+        var decodedMsg = decodeURIComponent(msg.replace(/\+/g, ' '));
+        showNotification(decodedMsg, status || 'success');
     }
 };
 </script>
