@@ -1,5 +1,6 @@
+<%@page import="model.Note"%>
 <%@ page session="true" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="dao.StudentDAO, model.Student, java.util.*" %>
+<%@ page import="dao.StudentDAO, model.Student, model.Note, java.util.*" %>
 <%
     if (session.getAttribute("studentName") == null) {
         response.sendRedirect("login.jsp");
@@ -778,6 +779,30 @@
             transform: none !important;
             box-shadow: none !important;
         }
+        
+        /* Card Grid Styles for Notes */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .note-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .note-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1); border-color: <%= primaryColor%>; }
+
+        .note-icon { width: 48px; height: 48px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: <%= primaryColor%>; font-size: 22px; margin-bottom: 15px; }
+        .note-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; color: #0f172a; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .note-meta { font-size: 13px; color: #64748b; margin-bottom: 18px; line-height: 1.6; }
+
+        .card-actions { display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 10px; text-align: center; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; transition: all 0.2s; }
+        .btn-download { background: <%= primaryColor%>; color: white; }
+        .btn-download:hover { background: <%= primaryDark%>; }
+        .btn-remove { background: #fee2e2; color: #ef4444; flex: 0 0 45px; }
+        .btn-remove:hover { background: #fecaca; }
+
+        /* Modal / Upload Style */
+        .section-upload { background: white; border: 1px solid #e2e8f0; padding: 25px; margin-bottom: 25px; border-radius: 16px; display: none; }
+
+        #notifContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; margin-bottom: 10px; border-left: 4px solid #10b981; animation: slideIn 0.3s ease-out; }
+        .toast.error { border-left-color: #ef4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -815,6 +840,11 @@
             </a>
         </li>
         <% } %>
+        <li class="nav-item">
+            <a href="dashboard.jsp?view=notes" class="nav-link <%= "notes".equals(view) ? "active" : ""%>">
+                <i class="fa-solid fa-book-open"></i> Study Notes
+            </a>
+        </li>
         <li>
             <a href="dashboard.jsp?view=profile" class="<%= view.equals("profile") ? "active" : "" %>">
                 <i class="fa-solid fa-user"></i>
@@ -1240,6 +1270,75 @@
                 </div>
             </div>
         </div>
+                            
+    <% } else if (view.equals("notes")) { %>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h2 style="font-size: 28px; font-weight: 800;">Study Resources</h2>
+            <% if (isMentor) { %>
+                <button onclick="document.getElementById('uploadModal').style.display='flex'" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> Upload Resource
+                </button>
+            <% } %>
+        </div>
+
+        <div class="card-grid">
+            <% 
+                try {
+                    List<Note> notes = isMentor ? sDao.getAllMentorNotes() : sDao.getNotesForMentee(currentId);
+                    if (notes == null || notes.isEmpty()) { 
+            %>
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px; background: white; border-radius: 20px; border: 1px dashed #cbd5e1;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px;"></i>
+                    <p style="color: #64748b;">No resources available yet.</p>
+                </div>
+            <% 
+                    } else { 
+                        for (Note n : notes) {
+            %>
+                <div class="note-card">
+                    <div class="note-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                    <div class="note-title" title="<%= n.getFileName() %>"><%= n.getFileName() %></div>
+                    <div class="note-meta">
+                        <div><i class="fa-solid fa-user-circle"></i> <%= n.getMentorName() %></div>
+                        <div><i class="fa-solid fa-calendar-day"></i> <%= n.getUploadDate() %></div>
+                    </div>
+                    <div class="card-actions">
+                        <a href="NoteController?action=download&id=<%= n.getNoteID() %>" class="btn btn-download">Download</a>
+                        <% if (isMentor) { %>
+                        <a href="NoteController?action=remove&id=<%= n.getNoteID() %>" class="btn btn-remove" onclick="return confirm('Delete this note?')">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                        <% } %>
+                    </div>
+                </div>
+            <%          } 
+                    }
+                } catch(Exception e) { %>
+                    <div style="grid-column: 1/-1; color: red;">Error: <%= e.getMessage() %></div>
+            <%  } %>
+        </div>
+
+        <% if (isMentor) { %>
+        <div id="uploadModal" class="modal-overlay">
+            <div class="modal-card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+                    <h3>Share Resources</h3>
+                    <button onclick="document.getElementById('uploadModal').style.display='none'" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form action="NoteController?action=upload" method="post" enctype="multipart/form-data">
+                    <div class="upload-dropzone" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" name="file" id="fileInput" required style="display: none;" onchange="updateFileName(this)">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 48px; color: <%= primaryColor %>;"></i>
+                        <p id="fileNameLabel">Click to browse files</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 10px;">
+                        <button type="button" onclick="document.getElementById('uploadModal').style.display='none'" class="btn btn-outline" style="flex:1;">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="flex:2;">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <% } %>
                         
     <% } else if (view.equals("profile")) { %>
         <h1 class="page-header">Account Settings</h1>
@@ -1354,6 +1453,35 @@ function filterMentors() {
     if(grid) grid.style.display = visibleCount === 0 ? "none" : "grid";
 }
 
+    function updateFileName(input) {
+        const label = document.getElementById('fileNameLabel');
+        if (input.files && input.files.length > 0) {
+            label.textContent = input.files[0].name;
+            label.style.color = '#10b981';
+        }
+    }
+
+    function showNotification(message, type = 'success') {
+        const container = document.getElementById('notifContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+        toast.innerHTML = `<i class="fa-solid ${icon}"></i><div>${message}</div>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('toast-fade-out');
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    }
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('status') === 'uploaded') showNotification('Material shared successfully!');
+        if (urlParams.get('status') === 'fail') showNotification('Upload failed. Please try again.', 'error');
+        if (urlParams.get('status') === 'error') showNotification('An unexpected error occurred.', 'error');
+    };
+    
 function showNotification(message, type) {
     type = type || 'success';
     var container = document.getElementById('notifContainer');

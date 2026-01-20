@@ -2,6 +2,7 @@ package dao;
 
 import controller.DBConn;
 import model.Student;
+import model.Note;
 import java.sql.*;
 import java.util.*;
 
@@ -321,6 +322,85 @@ public class StudentDAO {
         }
         return courses;
     }
+    
+    public boolean uploadNote(int mentorId, String fileName, String fileType, byte[] data) throws Exception {
+        String sql = "INSERT INTO notes (mentorID, fileName, fileType, fileData, uploadDate) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)";
+        try (Connection con = DBConn.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, mentorId);
+            ps.setString(2, fileName);
+            ps.setString(3, fileType);
+            ps.setBytes(4, data);
+            return ps.executeUpdate() > 0;
+        }
+    }
+    
+    public List<Note> getAllMentorNotes() throws Exception {
+        List<Note> list = new ArrayList<>();
+        String sql = "SELECT n.*, s.studentName FROM notes n JOIN student s ON n.mentorID = s.studentID ORDER BY n.uploadDate DESC";
+        try (Connection con = DBConn.getConnection();
+             Statement stmt = con.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                Note n = new Note();
+                n.setNoteID(rs.getInt("noteID"));
+                n.setMentorID(rs.getInt("mentorID"));
+                n.setMentorName(rs.getString("studentName"));
+                n.setFileName(rs.getString("fileName"));
+                n.setFileType(rs.getString("fileType"));
+                n.setUploadDate(rs.getTimestamp("uploadDate"));
+                list.add(n);
+            }
+        }
+        return list;
+    }
+    
+    public List<Note> getNotesForMentee(int menteeId) throws Exception {
+        List<Note> list = new ArrayList<>();
+        String sql = "SELECT n.*, s.studentName FROM notes n " +
+                     "JOIN student s ON n.mentorID = s.studentID " +
+                     "JOIN mentorship m ON n.mentorID = m.mentorID " +
+                     "WHERE m.menteeID = ? AND m.status = 'APPROVED' " +
+                     "ORDER BY n.uploadDate DESC";
+        try (Connection con = DBConn.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, menteeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Note n = new Note();
+                    n.setNoteID(rs.getInt("noteID"));
+                    n.setMentorID(rs.getInt("mentorID"));
+                    n.setMentorName(rs.getString("studentName"));
+                    n.setFileName(rs.getString("fileName"));
+                    n.setFileType(rs.getString("fileType"));
+                    n.setUploadDate(rs.getTimestamp("uploadDate"));
+                    list.add(n);
+                }
+            }
+        }
+        return list;
+    }
+    
+    public Note getNoteById(int noteId) throws Exception {
+        String sql = "SELECT * FROM notes WHERE noteID = ?";
+        try (Connection con = DBConn.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, noteId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Note n = new Note();
+                    n.setNoteID(rs.getInt("noteID"));
+                    n.setFileName(rs.getString("fileName"));
+                    n.setFileType(rs.getString("fileType"));
+                    n.setFileData(rs.getBytes("fileData"));
+                    return n;
+                }
+            }
+        }
+        return null;
+    }
+    
+    
 
     // --- HELPER METHOD ---
 
